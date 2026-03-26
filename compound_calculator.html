@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>복리 계산기</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --surface2: #1e2230;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3af;
+    --accent: #4f9cf9;
+    --accent-glow: rgba(79,156,249,0.15);
+    --green: #34d399;
+    --green-glow: rgba(52,211,153,0.12);
+    --amber: #fbbf24;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nanum Gothic', sans-serif;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+
+  h1 {
+    font-size: clamp(26px, 5vw, 38px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-weight: 400;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  .panel-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1.4rem;
+  }
+
+  .slider-block { margin-bottom: 1.5rem; }
+  .slider-block:last-child { margin-bottom: 0; }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+
+  .slider-label {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 700;
+  }
+
+  .slider-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(79,156,249,0.2);
+    transition: box-shadow 0.15s;
+  }
+
+  input[type=range]:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 5px rgba(79,156,249,0.25);
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+  }
+
+  .slider-range-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+  }
+
+  .slider-range-labels span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .result-panel {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 480px) {
+    .metric-row { grid-template-columns: 1fr; }
+  }
+
+  .metric {
+    padding: 1rem 1.2rem;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .metric-asset {
+    background: var(--accent-glow);
+    border: 1px solid rgba(79,156,249,0.2);
+  }
+
+  .metric-principal {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+  }
+
+  .metric-profit {
+    background: var(--green-glow);
+    border: 1px solid rgba(52,211,153,0.2);
+  }
+
+  .metric-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
+  }
+
+  .metric-val {
+    font-size: clamp(16px, 2.5vw, 22px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .metric-asset .metric-val { color: var(--accent); }
+  .metric-principal .metric-val { color: var(--text); }
+  .metric-profit .metric-val { color: var(--green); }
+
+  .metric-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    margin-top: 4px;
+    opacity: 0.6;
+  }
+
+  .metric-asset .metric-sub { color: var(--accent); }
+  .metric-principal .metric-sub { color: var(--text-dim); }
+  .metric-profit .metric-sub { color: var(--green); }
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 280px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-tag">복리 계산기 · Compound Interest</div>
+    <h1>내 투자는 <span>얼마</span>가 될까</h1>
+    <p class="subtitle">초기 투자금, 연 투자금, 수익률을 조절해 미래 자산을 확인하세요</p>
+  </header>
+
+  <div class="main-grid">
+
+    <div class="panel">
+      <div class="panel-title">투자 설정</div>
+
+      <div class="slider-block">
+        <div class="slider-header">
+          <span class="slider-label">초기 투자금</span>
+          <span class="slider-value" id="v-init">1억원</span>
+        </div>
+        <input type="range" id="s-init" min="0" max="1000000000" step="10000000" value="100000000">
+        <div class="slider-range-labels"><span>0원</span><span>10억원</span></div>
+      </div>
+
+      <div class="slider-block">
+        <div class="slider-header">
+          <span class="slider-label">연 투자금</span>
+          <span class="slider-value" id="v-annual">2,000만원</span>
+        </div>
+        <input type="range" id="s-annual" min="0" max="300000000" step="1000000" value="20000000">
+        <div class="slider-range-labels"><span>0원</span><span>3억원</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">수익률 & 기간</div>
+
+      <div class="slider-block">
+        <div class="slider-header">
+          <span class="slider-label">연 수익률 (복리)</span>
+          <span class="slider-value" id="v-rate">7.0%</span>
+        </div>
+        <input type="range" id="s-rate" min="0" max="200" step="0.5" value="7">
+        <div class="slider-range-labels"><span>0%</span><span>200%</span></div>
+      </div>
+
+      <div class="slider-block">
+        <div class="slider-header">
+          <span class="slider-label">투자 기간</span>
+          <span class="slider-value" id="v-years">20년</span>
+        </div>
+        <input type="range" id="s-years" min="1" max="40" step="1" value="20">
+        <div class="slider-range-labels"><span>1년</span><span>40년</span></div>
+      </div>
+    </div>
+
+    <div class="result-panel">
+      <div class="panel-title">결과 요약</div>
+      <div class="metric-row">
+        <div class="metric metric-asset">
+          <div class="metric-label">최종 자산</div>
+          <div class="metric-val" id="m-total">—</div>
+          <div class="metric-sub" id="m-total-sub"></div>
+        </div>
+        <div class="metric metric-principal">
+          <div class="metric-label">총 투자 원금</div>
+          <div class="metric-val" id="m-principal">—</div>
+          <div class="metric-sub" id="m-principal-sub"></div>
+        </div>
+        <div class="metric metric-profit">
+          <div class="metric-label">총 수익</div>
+          <div class="metric-val" id="m-profit">—</div>
+          <div class="metric-sub" id="m-profit-rate"></div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#4f9cf9;"></div>최종 자산</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6b7280; border-top: 2px dashed #6b7280; background:none; width:14px; height:0;"></div>투자 원금</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>매년 연초에 연 투자금이 추가되는 방식으로 계산됩니다</footer>
+</div>
+
+<script>
+function fmt(v) {
+  if (v >= 1e16) return (v/1e16).toFixed(1) + '경원';
+  if (v >= 1e12) return (v/1e12).toFixed(2) + '조원';
+  if (v >= 1e8)  return (v/1e8).toFixed(2) + '억원';
+  if (v >= 1e4)  return Math.round(v/1e4) + '만원';
+  return Math.round(v) + '원';
+}
+function fmtShort(v) {
+  if (v >= 1e16) return (v/1e16).toFixed(1) + '경';
+  if (v >= 1e12) return (v/1e12).toFixed(1) + '조';
+  if (v >= 1e8)  return (v/1e8).toFixed(1) + '억';
+  if (v >= 1e4)  return Math.round(v/1e4) + '만';
+  return Math.round(v) + '';
+}
+
+const ids = ['init','annual','rate','years'];
+
+function calc() {
+  const init   = +document.getElementById('s-init').value;
+  const annual = +document.getElementById('s-annual').value;
+  const rate   = +document.getElementById('s-rate').value / 100;
+  const years  = +document.getElementById('s-years').value;
+
+  document.getElementById('v-init').textContent   = init   === 0 ? '0원' : fmt(init);
+  document.getElementById('v-annual').textContent = annual === 0 ? '0원' : fmt(annual);
+  document.getElementById('v-rate').textContent   = (+document.getElementById('s-rate').value).toFixed(1) + '%';
+  document.getElementById('v-years').textContent  = years + '년';
+
+  let asset = init, principal = init;
+  const totalData = [], principalData = [], labels = [];
+
+  for (let y = 1; y <= years; y++) {
+    asset = asset * (1 + rate) + annual;
+    principal += annual;
+    labels.push(y + '년');
+    totalData.push(Math.round(asset));
+    principalData.push(Math.round(principal));
+  }
+
+  const fa = totalData[totalData.length - 1] || init;
+  const fp = principalData[principalData.length - 1] || init;
+  const profit = fa - fp;
+  const pr = fp > 0 ? (profit / fp * 100) : 0;
+
+  document.getElementById('m-total').textContent       = fmt(fa);
+  document.getElementById('m-total-sub').textContent   = fa >= 1e8 ? fmtShort(fa) + '원' : '';
+  document.getElementById('m-principal').textContent   = fmt(fp);
+  document.getElementById('m-principal-sub').textContent = fp >= 1e8 ? fmtShort(fp) + '원' : '';
+  document.getElementById('m-profit').textContent      = fmt(profit);
+  document.getElementById('m-profit-rate').textContent = (pr >= 0 ? '+' : '') + pr.toFixed(1) + '%';
+
+  if (window._chart) {
+    window._chart.data.labels = labels;
+    window._chart.data.datasets[0].data = totalData;
+    window._chart.data.datasets[1].data = principalData;
+    window._chart.update('none');
+  }
+}
+
+ids.forEach(id => {
+  document.getElementById('s-' + id).addEventListener('input', calc);
+});
+
+const ctx = document.getElementById('chart').getContext('2d');
+window._chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      {
+        label: '최종 자산',
+        data: [],
+        borderColor: '#4f9cf9',
+        backgroundColor: 'rgba(79,156,249,0.08)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 2,
+        pointBackgroundColor: '#4f9cf9',
+        borderWidth: 2
+      },
+      {
+        label: '투자 원금',
+        data: [],
+        borderColor: '#4b5563',
+        backgroundColor: 'rgba(75,85,99,0.05)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 0,
+        borderWidth: 1.5,
+        borderDash: [5,4]
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 200 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e2230',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#9ca3af',
+        bodyColor: '#e8eaf0',
+        callbacks: {
+          label: c => ' ' + c.dataset.label + ': ' + fmt(c.raw)
+        }
+      }
+    },
+    scales: {
+      y: {
+        ticks: {
+          callback: v => fmtShort(v),
+          font: { size: 11, family: "'IBM Plex Mono', monospace" },
+          color: '#4b5563',
+          maxTicksLimit: 6
+        },
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        border: { color: 'transparent' }
+      },
+      x: {
+        ticks: {
+          font: { size: 11, family: "'IBM Plex Mono', monospace" },
+          color: '#4b5563',
+          autoSkip: true,
+          maxTicksLimit: 10
+        },
+        grid: { display: false },
+        border: { color: 'rgba(255,255,255,0.06)' }
+      }
+    }
+  }
+});
+
+calc();
+</script>
+</body>
+</html>
